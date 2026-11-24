@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>온비드 경·공매 상가 수익률 분석기</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --accent: #0f766e;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --good: #059669;
+      --warn: #d97706;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 48px;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff;
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    header h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    header p { margin: 4px 0 0; font-size: 12px; opacity: 0.88; }
+    .container { max-width: 720px; margin: 0 auto; padding: 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+    input, select, button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+    }
+    input:focus, select:focus { outline: 2px solid rgba(29,78,216,0.25); border-color: var(--primary); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 7px 8px;
+    }
+    .btn-accent {
+      background: #ecfdf5;
+      color: var(--accent);
+      border: 1px solid #a7f3d0;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 6px 8px;
+    }
+    .item-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .item-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #eff6ff;
+      color: var(--primary);
+      margin-right: 4px;
+    }
+    .badge.comm { background: #ecfdf5; color: var(--good); }
+    .badge.res { background: #fef3c7; color: var(--warn); }
+    .addr { font-size: 14px; font-weight: 700; margin: 6px 0 4px; line-height: 1.35; }
+    .meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 10px 0;
+      text-align: center;
+    }
+    .metric-val { font-size: 14px; font-weight: 800; color: var(--primary-dark); }
+    .metric-val.good { color: var(--good); }
+    .metric-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+    .sim-box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .small-note { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>온비드 상가 수익률 분석기</h1>
+    <p>매각기일·최저가·면적 필터 + 주변 시세 조회 + 실투자금 수익률</p>
+  </header>
+
+  <div class="container">
+    <!-- 1. 온비드 필터 -->
+    <div class="card">
+      <div class="card-title">
+        <span>물건 필터 및 정렬</span>
+        <span id="resultCount" style="font-size:12px; color:var(--primary);">0건</span>
+      </div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div>
+          <label>부동산 종류</label>
+          <select id="fType" onchange="renderList()">
+            <option value="ALL">전체</option>
+            <option value="상가용">상가용 (근린생활시설/점포)</option>
+            <option value="주거용">주거용 (아파트/빌라/주택)</option>
+            <option value="토지/기타">토지/기타</option>
+          </select>
+        </div>
+        <div>
+          <label>지역 키워드 (시·구·동)</label>
+          <input id="fRegion" type="text" placeholder="예: 구리, 송파, 포천, 서울" oninput="renderList()" />
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:8px;">
+        <div>
+          <label>최저가 상한 (만원)</label>
+          <input id="fMinPriceMax" type="number" placeholder="예: 30000" oninput="renderList()" />
+        </div>
+        <div>
+          <label>감정가 하한 (만원)</label>
+          <input id="fAppraisalMin" type="number" placeholder="예: 10000" oninput="renderList()" />
+        </div>
+        <div>
+          <label>전용면적 최소 (㎡)</label>
+          <input id="fAreaMin" type="number" placeholder="예: 20" oninput="renderList()" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>입찰마감일(매각기일) ~ 까지</label>
+          <input id="fDateEnd" type="date" onchange="renderList()" />
+        </div>
+        <div>
+          <label>정렬 기준</label>
+          <select id="fSort" onchange="renderList()">
+            <option value="dateAsc">매각기일 빠른순</option>
+            <option value="priceAsc">최저가 낮은순</option>
+            <option value="areaDesc">면적 넓은순</option>
+            <option value="yieldDesc">예상 수익률 높은순</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 수익률 기준 및 물건 추가 -->
+    <div class="card">
+      <div class="card-title"><span>투자 조건 (수익률 계산 기준)</span></div>
+      <div class="grid-3">
+        <div>
+          <label>대출비율 LTV (%)</label>
+          <input id="gLtv" type="number" value="60" min="0" max="90" oninput="renderList()" />
+        </div>
+        <div>
+          <label>연 대출금리 (%)</label>
+          <input id="gRate" type="number" step="0.1" value="4.8" oninput="renderList()" />
+        </div>
+        <div>
+          <label>취득세율 (%)</label>
+          <input id="gTaxRate" type="number" step="0.1" value="4.6" oninput="renderList()" />
+        </div>
+      </div>
+      <div class="small-note">※ 상가 일반 취득세율 기본값 4.6% 적용. 실투자금 = 낙찰가 - 대출금 + 취득세·부대비용(0.5%).</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>물건 직접 추가 / API 키 설정</span>
+        <button class="btn-secondary" style="width:auto;" onclick="toggleApiBox()">API 키 설정</button>
+      </div>
+      <div id="apiBox" style="display:none; margin-bottom:10px; background:#f9fafb; padding:10px; border-radius:10px;">
+        <label>공공데이터포털 인증키 (저장됨)</label>
+        <input id="apiKeyInput" type="text" placeholder="발급받은 일반 인증키 붙여넣기" onchange="saveApiKey()" />
+        <div class="small-note">브라우저 보안(CORS) 정책상 공공 API 직접 호출이 막힐 수 있어, 우선 샘플·입력 물건으로 시뮬레이션하고 추후 프록시 서버와 연결할 수 있습니다.</div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div>
+          <label>부동산 종류</label>
+          <select id="newType">
+            <option value="상가용">상가용</option>
+            <option value="주거용">주거용</option>
+            <option value="토지/기타">토지/기타</option>
+          </select>
+        </div>
+        <div>
+          <label>매각기일(입찰마감일)</label>
+          <input id="newDate" type="date" value="2026-12-15" />
+        </div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <label>물건 소재지(주소)</label>
+        <input id="newAddr" type="text" placeholder="예: 경기도 구리시 수택동 123-4 상가 101호" />
+      </div>
+      <div class="grid-3" style="margin-bottom:8px;">
+        <div>
+          <label>감정가 (만원)</label>
+          <input id="newAppraisal" type="number" placeholder="25000" />
+        </div>
+        <div>
+          <label>최저가 (만원)</label>
+          <input id="newMinPrice" type="number" placeholder="17500" />
+        </div>
+        <div>
+          <label>전용면적 (㎡)</label>
+          <input id="newArea" type="number" step="0.1" placeholder="33.0" />
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div>
+          <label>주변 평당 월세 (만원/평)</label>
+          <input id="newRentPerPy" type="number" step="0.5" placeholder="8" />
+        </div>
+        <div>
+          <label>예상 보증금 (만원)</label>
+          <input id="newDeposit" type="number" placeholder="2000" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addItem()">+ 물건 리스트에 추가</button>
+    </div>
+
+    <!-- 3. 물건 리스트 -->
+    <div id="itemList"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "onbid_yield_items_v1";
+    const API_KEY_STORAGE = "onbid_data_go_kr_key_v1";
+
+    const defaultItems = [
+      {
+        id: 1,
+        type: "상가용",
+        addr: "경기도 구리시 수택동 420-1 근린상가 102호",
+        appraisal: 28000,
+        minPrice: 19600,
+        bidPrice: 20500,
+        areaSqm: 39.6,
+        endDate: "2026-12-10",
+        rentPerPy: 9.0,
+        deposit: 2000
+      },
+      {
+        id: 2,
+        type: "상가용",
+        addr: "서울특별시 송파구 거여동 195-3 상가 101호",
+        appraisal: 45000,
+        minPrice: 36000,
+        bidPrice: 37500,
+        areaSqm: 49.5,
+        endDate: "2026-12-18",
+        rentPerPy: 11.0,
+        deposit: 3000
+      },
+      {
+        id: 3,
+        type: "주거용",
+        addr: "경기도 포천시 어룡동 112-5 빌라 302호",
+        appraisal: 12000,
+        minPrice: 8400,
+        bidPrice: 8800,
+        areaSqm: 54.0,
+        endDate: "2026-12-05",
+        rentPerPy: 3.5,
+        deposit: 1000
+      }
+    ];
+
+    let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || defaultItems;
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedKey = localStorage.getItem(API_KEY_STORAGE);
+      if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+      renderList();
+    });
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function toggleApiBox() {
+      const box = document.getElementById("apiBox");
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    function saveApiKey() {
+      const val = document.getElementById("apiKeyInput").value.trim();
+      localStorage.setItem(API_KEY_STORAGE, val);
+      alert("인증키가 브라우저에 저장되었습니다.");
+    }
+
+    function addItem() {
+      const addr = document.getElementById("newAddr").value.trim();
+      const appraisal = Number(document.getElementById("newAppraisal").value) || 0;
+      const minPrice = Number(document.getElementById("newMinPrice").value) || 0;
+      const areaSqm = Number(document.getElementById("newArea").value) || 33;
+      const rentPerPy = Number(document.getElementById("newRentPerPy").value) || 0;
+      const deposit = Number(document.getElementById("newDeposit").value) || 0;
+      const type = document.getElementById("newType").value;
+      const endDate = document.getElementById("newDate").value || "2026-12-31";
+
+      if (!addr || !minPrice) {
+        alert("소재지(주소)와 최저가를 입력해 주세요.");
+        return;
+      }
+
+      items.unshift({
+        id: Date.now(),
+        type,
+        addr,
+        appraisal: appraisal || minPrice,
+        minPrice,
+        bidPrice: minPrice,
+        areaSqm,
+        endDate,
+        rentPerPy,
+        deposit
+      });
+      saveItems();
+      document.getElementById("newAddr").value = "";
+      renderList();
+    }
+
+    function updateBid(id, val) {
+      const target = items.find(x => x.id === id);
+      if (!target) return;
+      target.bidPrice = Number(val) || 0;
+      saveItems();
+      renderList();
+    }
+
+    function updateRent(id, val) {
+      const target = items.find(x => x.id === id);
+      if (!target) return;
+      target.rentPerPy = Number(val) || 0;
+      saveItems();
+      renderList();
+    }
+
+    function deleteItem(id) {
+      items = items.filter(x => x.id !== id);
+      saveItems();
+      renderList();
+    }
+
+    function calcMetrics(item) {
+      const ltv = (Number(document.getElementById("gLtv").value) || 0) / 100;
+      const rate = (Number(document.getElementById("gRate").value) || 0) / 100;
+      const taxRate = (Number(document.getElementById("gTaxRate").value) || 4.6) / 100;
+
+      const bid = item.bidPrice || item.minPrice;
+      const pyeong = item.areaSqm / 3.305785;
+      const monthlyRent = pyeong * (item.rentPerPy || 0); // 만원/월
+      const annualRent = monthlyRent * 12;
+
+      const loan = bid * ltv;
+      const monthlyInterest = (loan * rate) / 12;
+      const netMonthly = monthlyRent - monthlyInterest;
+
+      const acquisitionCost = bid * (taxRate + 0.005);
+      const equityNeeded = Math.max(100, bid - loan + acquisitionCost - (item.deposit || 0));
+      const roe = ((netMonthly * 12) / equityNeeded) * 100;
+
+      return {
+        pyeong: pyeong.toFixed(1),
+        monthlyRent: Math.round(monthlyRent),
+        monthlyInterest: Math.round(monthlyInterest),
+        netMonthly: Math.round(netMonthly),
+        equityNeeded: Math.round(equityNeeded),
+        roe: roe.toFixed(1)
+      };
+    }
+
+    function renderList() {
+      const fType = document.getElementById("fType").value;
+      const fRegion = document.getElementById("fRegion").value.trim().toLowerCase();
+      const fMinPriceMax = Number(document.getElementById("fMinPriceMax").value) || Infinity;
+      const fAppraisalMin = Number(document.getElementById("fAppraisalMin").value) || 0;
+      const fAreaMin = Number(document.getElementById("fAreaMin").value) || 0;
+      const fDateEnd = document.getElementById("fDateEnd").value;
+      const fSort = document.getElementById("fSort").value;
+
+      let filtered = items.filter(it => {
+        if (fType !== "ALL" && it.type !== fType) return false;
+        if (fRegion && !it.addr.toLowerCase().includes(fRegion)) return false;
+        if (it.minPrice > fMinPriceMax) return false;
+        if (it.appraisal < fAppraisalMin) return false;
+        if (it.areaSqm < fAreaMin) return false;
+        if (fDateEnd && it.endDate > fDateEnd) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        if (fSort === "dateAsc") return a.endDate.localeCompare(b.endDate);
+        if (fSort === "priceAsc") return a.minPrice - b.minPrice;
+        if (fSort === "areaDesc") return b.areaSqm - a.areaSqm;
+        if (fSort === "yieldDesc") return Number(calcMetrics(b).roe) - Number(calcMetrics(a).roe);
+        return 0;
+      });
+
+      document.getElementById("resultCount").textContent = `${filtered.length}건`;
+      const container = document.getElementById("itemList");
+      container.innerHTML = "";
+
+      filtered.forEach(it => {
+        const m = calcMetrics(it);
+        const q = encodeURIComponent(it.addr);
+        const badgeClass = it.type === "상가용" ? "comm" : (it.type === "주거용" ? "res" : "");
+
+        const div = document.createElement("div");
+        div.className = "item-card";
+        div.innerHTML = `
+          <div class="item-top">
+            <div>
+              <span class="badge ${badgeClass}">${it.type}</span>
+              <span class="badge">마감 ${it.endDate}</span>
+            </div>
+            <button class="btn-secondary" style="width:auto; padding:4px 8px;" onclick="deleteItem(${it.id})">삭제</button>
+          </div>
+          <div class="addr">${it.addr}</div>
+          <div class="meta">
+            <span>감정가 ${it.appraisal.toLocaleString()}만</span>
+            <span>최저가 <b>${it.minPrice.toLocaleString()}만</b></span>
+            <span>면적 ${it.areaSqm}㎡ (${m.pyeong}평)</span>
+          </div>
+
+          <div class="metrics">
+            <div>
+              <div class="metric-val good">${m.roe}%</div>
+              <div class="metric-lbl">실투자 수익률</div>
+            </div>
+            <div>
+              <div class="metric-val">${m.netMonthly.toLocaleString()}만</div>
+              <div class="metric-lbl">월 순현금(월세-이자)</div>
+            </div>
+            <div>
+              <div class="metric-val">${m.equityNeeded.toLocaleString()}만</div>
+              <div class="metric-lbl">예상 실투자금</div>
+            </div>
+          </div>
+
+          <div class="sim-box">
+            <div class="grid-2">
+              <div>
+                <label>입찰가 시뮬레이션 (만원)</label>
+                <input type="number" value="${it.bidPrice || it.minPrice}" onchange="updateBid(${it.id}, this.value)" />
+              </div>
+              <div>
+                <label>평당 월세 (만원/평) → 월 ${m.monthlyRent}만</label>
+                <input type="number" step="0.5" value="${it.rentPerPy}" onchange="updateRent(${it.id}, this.value)" />
+              </div>
+            </div>
+            <div class="small-note">월 대출이자 약 ${m.monthlyInterest.toLocaleString()}만원 반영됨</div>
+          </div>
+
+          <div class="links">
+            <a href="https://m.land.naver.com" target="_blank" style="text-decoration:none;">
+              <button type="button" class="btn-accent">네이버부동산</button>
+            </a>
+            <a href="https://www.disco.re" target="_blank" style="text-decoration:none;">
+              <button type="button" class="btn-accent">디스코 시세</button>
+            </a>
+            <a href="https://rt.molit.go.kr" target="_blank" style="text-decoration:none;">
+              <button type="button" class="btn-accent">국토부 실거래</button>
+            </a>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
